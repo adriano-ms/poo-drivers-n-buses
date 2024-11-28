@@ -188,8 +188,7 @@ public class DriverController implements Observer{
         Bus selectedBus = null;
         if(idProperty.getValue() != 0) {
             try {
-                driverDao.findOne(idProperty.longValue());
-                selectedBus = busProperty.getValue();
+                selectedBus = driverDao.findOne(idProperty.longValue()).getBus();
             } catch (NotFoundException e) {
                 clearFields();
             }
