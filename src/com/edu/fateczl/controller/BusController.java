@@ -2,6 +2,7 @@ package com.edu.fateczl.controller;
 
 import com.edu.fateczl.model.dao.DbException;
 import com.edu.fateczl.model.dao.IBusDao;
+import com.edu.fateczl.model.dao.NotFoundException;
 import com.edu.fateczl.model.dao.mariadb.MariaDbBusDao;
 import com.edu.fateczl.model.entities.Bus;
 
@@ -151,6 +152,12 @@ public class BusController implements Observer{
 
     @Override
     public void update() {
+        if(idProperty.getValue() != 0)
+        try {
+            busDao.findOne(idProperty.getValue());
+        } catch (NotFoundException e) {
+            clearFields();
+        }
         findAllBuses();
     }
     

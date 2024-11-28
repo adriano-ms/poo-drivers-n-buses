@@ -28,6 +28,8 @@ public class MainView extends Application {
         primaryStage.setTitle("Gerenciamento de Motoristas");
         primaryStage.setMinHeight(480);
         primaryStage.setMinWidth(720);
+        primaryStage.setWidth(primaryStage.getMinWidth());
+        primaryStage.setHeight(primaryStage.getMinHeight());
 
         root = new VBox();
         driversMenu = new MenuItem("Motoristas");

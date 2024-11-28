@@ -150,7 +150,9 @@ public class DriversView implements View {
     }
 
     private void initializeForm() {
-        form = new GridPane(5, 10);
+        form = new GridPane();
+        form.setHgap(5);
+        form.setVgap(10);
         idLabel = new Label();
         clearButton = new Button("Limpar");
         clearButton.setOnAction(e -> controller.clearFields());

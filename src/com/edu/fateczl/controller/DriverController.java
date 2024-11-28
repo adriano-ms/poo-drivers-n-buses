@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import com.edu.fateczl.model.dao.DbException;
 import com.edu.fateczl.model.dao.IBusDao;
 import com.edu.fateczl.model.dao.IDriverDao;
+import com.edu.fateczl.model.dao.NotFoundException;
 import com.edu.fateczl.model.dao.mariadb.MariaDbBusDao;
 import com.edu.fateczl.model.dao.mariadb.MariaDbDriverDao;
 import com.edu.fateczl.model.entities.Bus;
@@ -109,7 +110,7 @@ public class DriverController implements Observer{
         shiftProperty.setValue("");
         phoneProperty.setValue("");
         if(!buses.isEmpty())
-            busProperty.setValue(buses.getFirst());
+            busProperty.setValue(buses.get(0));
     }
 
     public void findAllDrivers() throws DbException{
@@ -183,10 +184,21 @@ public class DriverController implements Observer{
 
     @Override
     public void update() {
+        Bus selectedBus = null;
+        if(idProperty.getValue() != 0) {
+            try {
+                driverDao.findOne(idProperty.longValue());
+                selectedBus = busProperty.getValue();
+            } catch (NotFoundException e) {
+                clearFields();
+            }
+        }
         findAllBuses();
         findAllDrivers();
-        if(idProperty.getValue() == 0 && !buses.isEmpty())
-            busProperty.setValue(buses.getFirst());
+        if(selectedBus != null)
+            busProperty.setValue(selectedBus);
+        else if(!buses.isEmpty())
+            busProperty.setValue(buses.get(0));
     }
     
 }

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,8 +32,10 @@ public class MariaDbDriverDao implements IDriverDao{
     }
 
     public synchronized static MariaDbDriverDao getInstance(){
-        if(instance == null)
+        if(instance == null) {
             instance = new MariaDbDriverDao();
+            MariaDbBusDao.getInstance().subscribe(instance);
+        }
         return instance;
     }
 
@@ -43,14 +46,17 @@ public class MariaDbDriverDao implements IDriverDao{
 
         try(Connection conn = MariaDbConnection.getConnection()) {
             String sql = "INSERT INTO drivers (driver_license, name, admission_date, shift, phone, bus_id) VALUES (? ,?, ?, ?, ? ,?);";
-            PreparedStatement  statement = conn.prepareStatement(sql);
+            PreparedStatement  statement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, driver.getDriverLicense());
             statement.setString(2, driver.getName());
             statement.setString(3, driver.getAdmissionDate().toString());
             statement.setString(4, driver.getShift());
             statement.setString(5, driver.getPhone());
             statement.setLong(6, driver.getBus().getId());
-            long id = statement.executeUpdate();
+            statement.executeUpdate();
+            ResultSet rs = statement.getGeneratedKeys();
+            rs.first();
+            long id = rs.getLong(1);
             driver.setId(id);
             cash.put(id, driver);
             changeState();
@@ -144,6 +150,12 @@ public class MariaDbDriverDao implements IDriverDao{
         }
     }
 
+    private void loadBusesFromDatabase(){
+        cash.forEach((k, d) -> {
+            d.setBus(MariaDbBusDao.getInstance().findOne(d.getBus().getId()));
+        });
+    }
+
     @Override
     public void subscribe(Observer o) {
         observers.add(o);
@@ -157,6 +169,11 @@ public class MariaDbDriverDao implements IDriverDao{
     @Override
     public void changeState() {
         observers.forEach(o -> o.update());
+    }
+
+    @Override
+    public void update() {
+        loadBusesFromDatabase();
     }
     
 }
