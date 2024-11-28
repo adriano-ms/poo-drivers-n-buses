@@ -46,4 +46,9 @@ public class Bus {
     public void setLine(String line) {
         this.line = line;
     }
+
+    @Override
+    public String toString() {
+        return licensePlate + " | " + line;
+    }
 }

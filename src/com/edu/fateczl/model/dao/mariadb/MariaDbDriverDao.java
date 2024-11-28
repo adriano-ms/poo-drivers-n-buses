@@ -73,11 +73,12 @@ public class MariaDbDriverDao implements IDriverDao{
             statement.setString(4, driver.getShift());
             statement.setString(5, driver.getPhone());
             statement.setLong(6, driver.getBus().getId());
+            statement.setLong(7, driver.getId());
             statement.executeUpdate();
             cash.replace(driver.getId(), driver);
             changeState();
         } catch (SQLException e) {
-            throw new DbException("Erro na atualização!");
+            throw new DbException("Erro na deleção!");
         }
     }
 
@@ -129,7 +130,7 @@ public class MariaDbDriverDao implements IDriverDao{
                 do {
                     Driver driver = new Driver();
                     driver.setId(resultSet.getLong("id"));
-                    driver.setDriverLicense("driver_license");
+                    driver.setDriverLicense(resultSet.getString("driver_license"));
                     driver.setName(resultSet.getString("name"));
                     driver.setAdmissionDate(LocalDate.parse(resultSet.getString("admission_date")));
                     driver.setShift(resultSet.getString("shift"));

@@ -9,7 +9,6 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Insets;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -31,8 +30,8 @@ public class BusesView implements View{
     private VBox root;
     private GridPane form;
     private Label idLabel;
-    private TextField licensePlateField;
     private Button clearButton;
+    private TextField licensePlateField;
     private TextField brandField;
     private TextField seatsNumber;
     private CheckBox eletricCheckBox;
@@ -54,42 +53,37 @@ public class BusesView implements View{
     public BusesView(){
         controller = new BusController();
         root = new VBox();
-        form = new GridPane(5,10);
-        idLabel = new Label();
-        licensePlateField = new TextField();
-        clearButton = new Button("Limpar");
-        clearButton.setOnAction(e -> controller.clearFields());
-        brandField = new TextField();
-        seatsNumber = new TextField();        
-        eletricCheckBox = new CheckBox("Elétrico");
-        lineField = new TextField();
-        addButton = new Button("Salvar");
-        addButton.setOnAction(e -> saveAction());
-        form.add(new Label("ID"), 0, 0);
-        form.add(idLabel, 1, 0);
-        form.add(clearButton, 2, 0);
-        form.add(new Label("Placa"), 0, 1);
-        form.add(licensePlateField, 1, 1);
-        form.add(new Label("Marca"), 0, 2);
-        form.add(brandField, 1, 2);
-        form.add(new Label("Linha"), 0, 3);
-        form.add(lineField, 1, 3);
-        form.add(new Label("Assentos"), 0, 4);
-        form.add(seatsNumber, 1, 4);
-        form.add(eletricCheckBox, 0, 5);
-        form.add(addButton, 0, 6);
-        Constraints.setTextFieldMaxLength(licensePlateField, 7);
-        Constraints.setTextFieldInteger(seatsNumber);
-        Constraints.setTextFieldMaxLength(seatsNumber, 3);
+        initializeForm();
+        initializeSearchBox();
+        initializeTable();
+        bindProperties();
+        root.getChildren().addAll(form, searchBox, tableView);
+    }
 
-        searchBox = new HBox();
-        searchField = new TextField();
-        searchField.setPromptText("Pesquisar...");
-        searchButton = new Button("Pesquisar");
-        searchButton.setOnAction(e -> controller.searchBuses());
-        searchBox.getChildren().addAll(searchField, searchButton);
-        HBox.setHgrow(searchField, Priority.ALWAYS);
+    @Override
+    public Pane render() {
+        tableView.setItems(controller.getBusesObservableList());
+        controller.findAllBuses();
+        return root;  
+    }
 
+    private void saveAction(){
+        try {
+            controller.insertBus();
+        } catch (DbException | InvalidInputException e) {
+            Alert.showAlert(AlertType.ERROR, "Erro!", null, e.getMessage());
+        }
+    }
+
+    private void searchAction(){
+        try {
+            controller.searchBuses();
+        } catch (DbException e) {
+            Alert.showAlert(AlertType.ERROR, "Erro!", null, e.getMessage());
+        }
+    }
+
+    private void initializeTable() {
         tableView = new TableView<>();
         plateColumn = new TableColumn<>("Placa");
         brandColumn = new TableColumn<>("Marca");
@@ -115,40 +109,67 @@ public class BusesView implements View{
                 else {
                     HBox.setMargin(deleteButton, new Insets(0, 2, 0, 0));
                     setGraphic(actions);
-                    deleteButton.setOnAction(e -> controller.deleteBus(item.getId()));
+                    deleteButton.setOnAction(e -> {
+                        try {
+                            controller.deleteBus(item.getId());
+                        } catch (DbException e1) {
+                            Alert.showAlert(AlertType.ERROR, "Erro!", null, e1.getMessage());
+                        }
+                    });
                     editButton.setOnAction(e -> controller.entityToBoundary(item));
                 }
             };
         });
+        actionsColumn.setReorderable(false);
         tableView.getColumns().add(plateColumn);
         tableView.getColumns().add(brandColumn);
         tableView.getColumns().add(seatsNumberColumn);
         tableView.getColumns().add(eletricColumn);
         tableView.getColumns().add(lineColumn);
         tableView.getColumns().add(actionsColumn);
+    }
 
-        bindProperties();
+    private void initializeSearchBox() {
+        searchBox = new HBox();
+        searchField = new TextField();
+        searchField.setPromptText("Pesquisar...");
+        searchButton = new Button("Pesquisar");
+        searchButton.setOnAction(e -> searchAction());
+        searchBox.getChildren().addAll(searchField, searchButton);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
+    }
 
-        root.getChildren().addAll(form, searchBox, tableView);
+    private void initializeForm() {
+        form = new GridPane(5,10);
+        idLabel = new Label();
+        clearButton = new Button("Limpar");
+        licensePlateField = new TextField();
+        clearButton.setOnAction(e -> controller.clearFields());
+        brandField = new TextField();
+        seatsNumber = new TextField();        
+        eletricCheckBox = new CheckBox("Elétrico");
+        lineField = new TextField();
+        addButton = new Button("Salvar");
+        addButton.setOnAction(e -> saveAction());
+        form.add(new Label("ID"), 0, 0);
+        form.add(idLabel, 1, 0);
+        form.add(clearButton, 2, 0);
+        form.add(new Label("Placa"), 0, 1);
+        form.add(licensePlateField, 1, 1);
+        form.add(new Label("Marca"), 0, 2);
+        form.add(brandField, 1, 2);
+        form.add(new Label("Linha"), 0, 3);
+        form.add(lineField, 1, 3);
+        form.add(new Label("Assentos"), 0, 4);
+        form.add(seatsNumber, 1, 4);
+        form.add(eletricCheckBox, 0, 5);
+        form.add(addButton, 0, 6);
+        Constraints.setTextFieldMaxLength(licensePlateField, 7);
+        Constraints.setTextFieldMaxLength(brandField, 32);
+        Constraints.setTextFieldInteger(seatsNumber);
+        Constraints.setTextFieldMaxLength(seatsNumber, 3);
+        Constraints.setTextFieldMaxLength(lineField, 16);
         VBox.setMargin(form, new Insets(10));
-    }
-
-    @Override
-    public Pane render() {
-        tableView.setItems(controller.getBusesObservableList());
-        controller.findAllBuses();
-        return root;  
-    }
-
-    private void saveAction(){
-        try {
-            controller.insertBus();
-        } catch (DbException | InvalidInputException e) {
-            Alert alert = new Alert(AlertType.ERROR);
-            alert.setTitle("Erro!");
-            alert.setContentText(e.getMessage());
-            alert.show();
-        }
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

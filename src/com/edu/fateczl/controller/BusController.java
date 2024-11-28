@@ -82,7 +82,7 @@ public class BusController implements Observer{
         buses.setAll(busDao.findAll());
     }
 
-    public void searchBuses() {
+    public void searchBuses()  throws DbException{
         String search = searchProperty.getValue();
         findAllBuses();
         if(search != null && !search.isBlank()) {
