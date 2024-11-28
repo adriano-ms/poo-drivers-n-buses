@@ -2,7 +2,9 @@ package com.edu.fateczl.model.dao;
 
 import java.util.List;
 
-public interface IDao<T> {
+import com.edu.fateczl.controller.Publisher;
+
+public interface IDao<T> extends Publisher{
 
     void insert(T obj) throws DbException;
     void update(T obj) throws DbException;

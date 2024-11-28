@@ -8,7 +8,7 @@ import com.edu.fateczl.model.entities.Driver;
 
 public class DriverController {
 
-    IDriverDao driverDao;
+    private IDriverDao driverDao;
 
     public DriverController(){;
         driverDao = MariaDbDriverDao.getInstance();

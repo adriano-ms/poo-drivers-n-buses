@@ -11,9 +11,9 @@ import java.sql.SQLException;
 
 import com.edu.fateczl.model.dao.DbException;
 
-public class Db {
+public class MariaDbConnection {
 
-    private Db(){
+    private MariaDbConnection(){
         super();
     }
 

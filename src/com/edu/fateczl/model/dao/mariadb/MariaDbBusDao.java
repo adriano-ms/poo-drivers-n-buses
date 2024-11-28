@@ -6,22 +6,27 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.edu.fateczl.controller.Observer;
 import com.edu.fateczl.model.dao.DbException;
 import com.edu.fateczl.model.dao.IBusDao;
 import com.edu.fateczl.model.dao.NotFoundException;
 import com.edu.fateczl.model.entities.Bus;
 
-public class MariaDbBusDao implements IBusDao{
+public class MariaDbBusDao implements IBusDao {
 
     private ConcurrentHashMap<Long, Bus> cash;
+
+    private Set<Observer> observers;
 
     private static MariaDbBusDao instance;
 
     private MariaDbBusDao(){
-        super();
+        observers = new HashSet<>();
     }
 
     public synchronized static MariaDbBusDao getInstance(){
@@ -36,20 +41,23 @@ public class MariaDbBusDao implements IBusDao{
         if(cash == null) 
             loadCacheFromDatabase();
 
-        try(Connection conn = Db.getConnection()){
-            String sql = "INSERT INTO buses (license_plate, model, line) VALUES (? ,? , ?);";
+        try(Connection conn = MariaDbConnection.getConnection()){
+            String sql = "INSERT INTO buses (license_plate, brand, seats_number, is_eletric, line) VALUES (? ,? , ?, ?, ?);";
             PreparedStatement  statement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, bus.getLicensePlate());
-            statement.setString(2, bus.getModel());
-            statement.setString(3, bus.getLine());
+            statement.setString(2, bus.getBrand());
+            statement.setInt(3, bus.getSeatsNumber());
+            statement.setBoolean(4, bus.isEletric());
+            statement.setString(5, bus.getLine());
             statement.executeUpdate();
             ResultSet rs = statement.getGeneratedKeys();
             rs.first();
             long id = rs.getLong(1);
             bus.setId(id);
             cash.put(id, bus);
+            changeState();
         } catch (SQLException e) {
-            throw new DbException(e.getMessage());
+            throw new DbException("Erro na inserção!");
         }
     }
 
@@ -58,15 +66,18 @@ public class MariaDbBusDao implements IBusDao{
         if(cash == null) 
             loadCacheFromDatabase();
 
-        try(Connection conn = Db.getConnection()) {
-            String sql = "UPDATE buses SET license_plate = ?, model = ?, line = ? WHERE id = ?;";
+        try(Connection conn = MariaDbConnection.getConnection()) {
+            String sql = "UPDATE buses SET license_plate = ?, brand = ?, seats_number = ?, is_eletric = ?, line = ? WHERE id = ?;";
             PreparedStatement  statement = conn.prepareStatement(sql);
             statement.setString(1, bus.getLicensePlate());
-            statement.setString(2, bus.getModel());
-            statement.setString(3, bus.getLine());
-            statement.setLong(4, bus.getId());
+            statement.setString(2, bus.getBrand());
+            statement.setInt(3, bus.getSeatsNumber());
+            statement.setBoolean(4, bus.isEletric());
+            statement.setString(5, bus.getLine());
+            statement.setLong(6, bus.getId());
             statement.executeUpdate();
             cash.replace(bus.getId(), bus);
+            changeState();
         } catch (SQLException e) {
             throw new DbException("Erro na atualização!");
         }
@@ -77,12 +88,13 @@ public class MariaDbBusDao implements IBusDao{
         if(cash == null) 
             loadCacheFromDatabase();
 
-        try (Connection conn = Db.getConnection()) {
+        try (Connection conn = MariaDbConnection.getConnection()) {
             String sql = "DELETE FROM buses WHERE id = ?;";
             PreparedStatement  statement = conn.prepareStatement(sql);
             statement.setLong(1, id);
             statement.executeUpdate();
             cash.remove(id);
+            changeState();
         } catch (SQLException e) {
             throw new DbException("Erro na deleção!");
         }
@@ -109,9 +121,9 @@ public class MariaDbBusDao implements IBusDao{
 
     private void loadCacheFromDatabase() throws DbException{
         cash = new ConcurrentHashMap<>();
-        try (Connection conn = Db.getConnection()) {
+        try (Connection conn = MariaDbConnection.getConnection()) {
             String sql = 
-                "SELECT id, license_plate, model, line FROM buses";
+                "SELECT id, license_plate, brand, seats_number, is_eletric, line FROM buses";
             PreparedStatement statement = conn.prepareStatement(sql);
             ResultSet resultSet = statement.executeQuery();
 
@@ -120,12 +132,29 @@ public class MariaDbBusDao implements IBusDao{
                     Bus bus = new Bus();
                     bus.setId(resultSet.getLong("id"));
                     bus.setLicensePlate(resultSet.getString("license_plate"));
-                    bus.setModel(resultSet.getString("model"));
+                    bus.setBrand(resultSet.getString("brand"));
+                    bus.setSeatsNumber(resultSet.getInt("seats_number"));
+                    bus.setEletric(resultSet.getBoolean("is_eletric"));
                     bus.setLine(resultSet.getString("line"));
                     cash.put(bus.getId(), bus);
                 }while(resultSet.next());
         } catch (SQLException e) {
             throw new DbException("Erro na consulta!");
         }
+    }
+
+    @Override
+    public void subscribe(Observer o) {
+        observers.add(o);
+    }
+
+    @Override
+    public void unsubscribe(Observer o) {
+        observers.remove(o);
+    }
+
+    @Override
+    public void changeState() {
+        observers.forEach(o -> o.update());
     }
 }

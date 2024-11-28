@@ -1,15 +1,12 @@
 package com.edu.fateczl.view;
 
-import java.util.HashMap;
-import java.util.Map;
-
-
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -20,9 +17,7 @@ public class MainView extends Application {
     private Menu mainMenu;
     private MenuItem driversMenu;
     private MenuItem busesMenu;
-    private BorderPane borderPane;
-
-    private Map<String, View> views;
+    private TabPane tabPane;
 
     public static void main(String[] args) {
         Application.launch(args);
@@ -33,9 +28,6 @@ public class MainView extends Application {
         primaryStage.setTitle("Gerenciamento de Motoristas");
         primaryStage.setMinHeight(480);
         primaryStage.setMinWidth(720);
-        views = new HashMap<>();
-        views.put("drivers", new DriversView());
-        views.put("buses", new BusesView());
 
         root = new VBox();
         driversMenu = new MenuItem("Motoristas");
@@ -44,11 +36,11 @@ public class MainView extends Application {
         mainMenu.getItems().addAll(driversMenu, busesMenu);
         menuBar = new MenuBar();
         menuBar.getMenus().add(mainMenu);
-        driversMenu.setOnAction(e -> borderPane.setCenter(views.get("drivers").render()));
-        busesMenu.setOnAction(e -> borderPane.setCenter(views.get("buses").render()));
-        borderPane = new BorderPane();
+        driversMenu.setOnAction(e -> tabPane.getTabs().add(new Tab("Motoristas",  new DriversView().render())));
+        busesMenu.setOnAction(e -> tabPane.getTabs().add(new Tab("Ônibus", new BusesView().render())));
+        tabPane = new TabPane();
 
-        root.getChildren().addAll(menuBar, borderPane);
+        root.getChildren().addAll(menuBar, tabPane);
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
     }

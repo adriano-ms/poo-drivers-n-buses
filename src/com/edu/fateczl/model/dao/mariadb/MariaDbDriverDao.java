@@ -4,10 +4,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.edu.fateczl.controller.Observer;
 import com.edu.fateczl.model.dao.DbException;
 import com.edu.fateczl.model.dao.IDriverDao;
 import com.edu.fateczl.model.dao.NotFoundException;
@@ -18,10 +22,12 @@ public class MariaDbDriverDao implements IDriverDao{
 
     private ConcurrentHashMap<Long, Driver> cash;
 
+    private Set<Observer> observers;
+
     private static MariaDbDriverDao instance;
 
     private MariaDbDriverDao(){
-        super();
+        observers = new HashSet<>();
     }
 
     public synchronized static MariaDbDriverDao getInstance(){
@@ -35,15 +41,19 @@ public class MariaDbDriverDao implements IDriverDao{
         if(cash == null) 
             loadCacheFromDatabase();
 
-        try(Connection conn = Db.getConnection()) {
-            String sql = "INSERT INTO drivers (driver_license, name, bus_id) VALUES (? ,?, ?);";
+        try(Connection conn = MariaDbConnection.getConnection()) {
+            String sql = "INSERT INTO drivers (driver_license, name, admission_date, shift, phone, bus_id) VALUES (? ,?, ?, ?, ? ,?);";
             PreparedStatement  statement = conn.prepareStatement(sql);
             statement.setString(1, driver.getDriverLicense());
             statement.setString(2, driver.getName());
-            statement.setLong(3, driver.getBus().getId());
+            statement.setString(3, driver.getAdmissionDate().toString());
+            statement.setString(4, driver.getShift());
+            statement.setString(5, driver.getPhone());
+            statement.setLong(6, driver.getBus().getId());
             long id = statement.executeUpdate();
             driver.setId(id);
             cash.put(id, driver);
+            changeState();
         } catch (SQLException e) {
             throw new DbException("Erro na inserção!");
         }
@@ -54,14 +64,18 @@ public class MariaDbDriverDao implements IDriverDao{
         if(cash == null) 
             loadCacheFromDatabase();
 
-        try(Connection conn = Db.getConnection()) {
-            String sql = "UPDATE drivers SET driver_license = ?, name = ?, bus_id = ? WHERE id = ?;";
+        try(Connection conn = MariaDbConnection.getConnection()) {
+            String sql = "UPDATE drivers SET driver_license = ?, name = ?, admission_date = ?, shift = ?, phone = ?, bus_id = ? WHERE id = ?;";
             PreparedStatement  statement = conn.prepareStatement(sql);
             statement.setString(1, driver.getDriverLicense());
             statement.setString(2, driver.getName());
-            statement.setLong(3, driver.getBus().getId());
+            statement.setString(3, driver.getAdmissionDate().toString());
+            statement.setString(4, driver.getShift());
+            statement.setString(5, driver.getPhone());
+            statement.setLong(6, driver.getBus().getId());
             statement.executeUpdate();
             cash.replace(driver.getId(), driver);
+            changeState();
         } catch (SQLException e) {
             throw new DbException("Erro na atualização!");
         }
@@ -72,12 +86,13 @@ public class MariaDbDriverDao implements IDriverDao{
         if(cash == null) 
             loadCacheFromDatabase();
 
-        try (Connection conn = Db.getConnection()) {
+        try (Connection conn = MariaDbConnection.getConnection()) {
             String sql = "DELETE FROM drivers WHERE id = ?;";
             PreparedStatement  statement = conn.prepareStatement(sql);
             statement.setLong(1, id);
             statement.executeUpdate();
             cash.remove(id);
+            changeState();
         } catch (SQLException e) {
             throw new DbException("Erro na deleção!");
         }
@@ -104,9 +119,9 @@ public class MariaDbDriverDao implements IDriverDao{
 
     private void loadCacheFromDatabase() throws DbException{
         cash = new ConcurrentHashMap<>();
-        try (Connection conn = Db.getConnection()) {
+        try (Connection conn = MariaDbConnection.getConnection()) {
             String sql = 
-                "SELECT id, driver_license, name, bus_id FROM drivers;";
+                "SELECT id, driver_license, name, admission_date, shift, phone, bus_id FROM drivers;";
             PreparedStatement statement = conn.prepareStatement(sql);
             ResultSet resultSet = statement.executeQuery();
 
@@ -116,6 +131,9 @@ public class MariaDbDriverDao implements IDriverDao{
                     driver.setId(resultSet.getLong("id"));
                     driver.setDriverLicense("driver_license");
                     driver.setName(resultSet.getString("name"));
+                    driver.setAdmissionDate(LocalDate.parse(resultSet.getString("admission_date")));
+                    driver.setShift(resultSet.getString("shift"));
+                    driver.setPhone(resultSet.getString("phone"));
                     Bus bus = MariaDbBusDao.getInstance().findOne(resultSet.getLong("bus_id"));
                     driver.setBus(bus);
                     cash.put(driver.getId(), driver);
@@ -123,6 +141,21 @@ public class MariaDbDriverDao implements IDriverDao{
         } catch (SQLException e) {
             throw new DbException("Erro na consulta!");
         }
+    }
+
+    @Override
+    public void subscribe(Observer o) {
+        observers.add(o);
+    }
+
+    @Override
+    public void unsubscribe(Observer o) {
+        observers.remove(o);
+    }
+
+    @Override
+    public void changeState() {
+        observers.forEach(o -> o.update());
     }
     
 }
