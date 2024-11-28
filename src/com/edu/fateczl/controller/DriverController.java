@@ -84,6 +84,7 @@ public class DriverController implements Observer{
             driver.setId(idProperty.get());
             driverDao.update(driver);
         }
+        clearFields();
     }
 
     public void deleteDriver(long id) throws DbException{
